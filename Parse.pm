@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.14'; # 08-Jul-2003
+our $VERSION = '0.15'; # 09-Jul-2003
 
 =head1 NAME
 
@@ -1225,6 +1225,7 @@ They are the same as for parse_game();
             an array element
   'hol'     Comments are stored in a hash of lists
             different for each comment type.
+
 =cut
 
 sub add_comments {
