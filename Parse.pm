@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.07'; # 28-Mar-2002
+our $VERSION = '0.09'; # 22-Dec-2002
 
 =head1 NAME
 
@@ -742,7 +742,7 @@ sub _get_tags {
     my @newtags=();
     my %seen = (Game =>1);
     if (exists $params->{all_tags} 
-        and ($params->{all_tags} =~ /^(:?[Yy][Ee][Ss]|1)$/)) 
+        and ($params->{all_tags} =~ /^(?:[Yy][Ee][Ss]|1)$/)) 
     {
         for (@SevenTagsRoster) {
             push @newtags, $_;
@@ -870,7 +870,7 @@ sub standard_PGN {
     }
     return $out 
         if (exists $params->{game} 
-            and (lc $params->{game} !~ /$(:?[Yy][Ee][Ss]|1)$/)); 
+            and (lc $params->{game} !~ /$(?:[Yy][Ee][Ss]|1)$/)); 
     if (defined $self->{GameMoves}) { # if parsed
         my $count = 1;
         my $color = 'w';
@@ -965,18 +965,18 @@ our $RE_brace = qr/
 # ==============================================
 
 # regular expressions for game parsing
-my $REresult    = qr{(:?1\-0|0\-1|1\/2\-1\/2|\*)};
-my $REmove      = qr{[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](:?\=[QRBN])?};
+my $REresult    = qr{(?:1\-0|0\-1|1\/2\-1\/2|\*)};
+my $REmove      = qr{[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:\=[QRBN])?};
 #  piece              ^^^^^ 
 #  unambiguous column or line ^^^   ^^^   
 #  capture                               ^ 
 #  destination square                       ^^^  ^^^
 #  promotion                                             ^ ^^^^^
-my $REcastling  = qr/O\-O(:?\-O)?/;
-my $REcheck     = qr/(:?(:?\#|\+(\+)?))?/;
-my $REanymove   = qr/(:?$REmove|$REcastling)$REcheck/;
+my $REcastling  = qr/O\-O(?:\-O)?/;
+my $REcheck     = qr/(?:(?:\#|\+(\+)?))?/;
+my $REanymove   = qr/(?:$REmove|$REcastling)$REcheck/;
 my $RENAG       = qr/\$\d+/;
-my $REnumber    = qr/\d+\.(:?\.\.)?/;
+my $REnumber    = qr/\d+\.(?:\.\.)?/;
 my $REescape    = qr/^\%[^\n]*\n/;
 my $REeolcomment= qr/;.*$/;
 my $RERAV       = $RE_parens;
@@ -1002,11 +1002,11 @@ sub quick_parse_game {
         s/\r/ /g;          # remove return chars (DOS)
     $self->{gamedescr}{Game} =~ s/$RENAG//go;      # remove NAG
     $self->{gamedescr}{Game} =~ s/\d+\.//g;       # remove numbers
-    $self->{gamedescr}{Game} =~ s/\.\.(:?\.)?//g; # remove "..."
+    $self->{gamedescr}{Game} =~ s/\.\.(?:\.)?//g; # remove "..."
     $self->{gamedescr}{Game} =~ s/$REresult\s*\Z//o;
     my $REfilter = qr/\S/;
     if (exists $params->{check_moves} 
-        and ($params->{check_moves} =~ /^(:?yes|1)$/)) 
+        and ($params->{check_moves} =~ /^(?:yes|1)$/)) 
     {
         $REfilter = $REanymove;
     }
@@ -1075,9 +1075,9 @@ sub parse_game {
     my $self = shift;
     my $params = shift;
     my $save_comments = (exists $params->{save_comments})
-        and ($params->{save_comments} =~ /^(:?yes|1)$/);
+        and ($params->{save_comments} =~ /^(?:yes|1)$/);
     my $log_errors = (exists $params->{log_errors}) 
-        and ($params->{log_errors} =~ /^(:?yes|1)$/);
+        and ($params->{log_errors} =~ /^(?:yes|1)$/);
     return undef unless $self->{gamedescr}{Game};
     my $movecount = 0;
     my $color = 'b';
@@ -1091,7 +1091,7 @@ sub parse_game {
         if ($save_comments 
             and exists $params->{comments_struct}); 
     $comments_struct = 'string' 
-        unless $comments_struct =~ /^(:?array|hol)$/;
+        unless $comments_struct =~ /^(?:array|hol)$/;
     my $plycount = 0;
     my $countless =0;
     $self->{gamedescr}{Game} =~ s/\s*\Z//;
@@ -1102,84 +1102,82 @@ sub parse_game {
     }
     # ---- end 0.07 changes
     
-    PARSER:
-    {
-        $self->{gamedescr}{Game} =~ m/\G($REnumber)\s*/mgc && do {
-            my $num=$1;
-            if (( $num =~ tr/\.//d) > 1) {
-                $color = 'w';
-            }
-            if ($movecount == 0) {
-                $movecount = $num;
-                $self->{gamedescr}{FirstMove} = 
-                    $num.$switchcolor{$color} # fixed 0.07
-                        unless $num.$switchcolor{$color} eq '1w';
-            }
-            elsif ($movecount == ($num -1)) {
-                $movecount++;
-            }
-            elsif ($movecount != $num) {
-                $self->{GameErrors}->{$movecount.$color} 
-                    .= " invalid move sequence ($num <=> $movecount)";
-                $movecount++;
-            }
-            redo
-        };
-        $self->{gamedescr}{Game} =~ m/\G($REanymove)\s*/mgc && do { 
-            push @{$self->{GameMoves}}, $1; 
-            $color = $switchcolor{$color};
-            # ---- start 0.07 changes
-            if ($countless) {
-                $plycount++;
-                if ($plycount == 2) {
-                    $plycount =0;
+    for ($self->{gamedescr}{Game}) {
+        while (! /\G \s* \z/xgc ) {
+        
+            if ( m/\G($REnumber)\s*/mgc) {
+                my $num=$1;
+                if (( $num =~ tr/\.//d) > 1) {
+                    $color = 'w';
+                }
+                if ($movecount == 0) {
+                    $movecount = $num;
+                    $self->{gamedescr}{FirstMove} = 
+                        $num.$switchcolor{$color} # fixed 0.07
+                            unless $num.$switchcolor{$color} eq '1w';
+                }
+                elsif ($movecount == ($num -1)) {
+                    $movecount++;
+                }
+                elsif ($movecount != $num) {
+                    $self->{GameErrors}->{$movecount.$color} 
+                        .= " invalid move sequence ($num <=> $movecount)";
                     $movecount++;
                 }
             }
-            # ---- end 0.07 changes
-            redo
-        };
-        $self->{gamedescr}{Game} =~ 
-        m/\G($REcomment
-            |$REeolcomment
-            |$RERAV
-            |$RENAG|$REescape)\s*/mgcx 
-        && do 
-        {
-            if ($save_comments) { 
+            elsif ( m/\G($REanymove)\s*/mgc ) { 
+                push @{$self->{GameMoves}}, $1; 
+                $color = $switchcolor{$color};
                 # ---- start 0.07 changes
-                my $tempcomment = $1;
-                $tempcomment =~ tr/\r//d;
-                $tempcomment =~ s/\n/ /g;
-                $tempcomment =~ s/^\s+//;
-                $tempcomment =~ s/\s+$//;
-                if ($comments_struct eq 'string') {
-                    $self->{GameComments}->{$movecount.$color} .= 
-                        " " . $tempcomment;
-                }
-                elsif ($comments_struct eq 'array') {
-                    push @{$self->{GameComments}->{$movecount.$color}},
-                        $tempcomment;
-                }
-                else { # hol
-                    $tempcomment =~ m/^(.)/;
-                    my $comment_type ='unknown';
-                    $comment_type = $comment_types{$1}
-                        if ($1 and exists $comment_types{$1});
-                    push @{$self->{GameComments}->{$movecount.$color}->{$comment_type}} , $tempcomment;
+                if ($countless) {
+                    $plycount++;
+                    if ($plycount == 2) {
+                        $plycount =0;
+                        $movecount++;
+                    }
                 }
                 # ---- end 0.07 changes
             }
-            redo
-        };
-        $self->{gamedescr}{Game} =~ m/\G(\S+\s*)/mgc && do {
-            if ($log_errors) {
-                $self->{GameErrors}->{$movecount.$color} .= " " . $1;
-                $self->{GameErrors}->{$movecount.$color} =~ tr/\r//d;
-                $self->{GameErrors}->{$movecount.$color} =~ s/\n/ /g;
-            }    
-            redo
-        };
+            elsif ( 
+                m/\G($REcomment
+                    |$REeolcomment
+                    |$RERAV
+                    |$RENAG|$REescape)\s*/mgcx 
+                ) 
+            {
+                if ($save_comments) { 
+                    # ---- start 0.07 changes
+                    my $tempcomment = $1;
+                    $tempcomment =~ tr/\r//d;
+                    $tempcomment =~ s/\n/ /g;
+                    $tempcomment =~ s/^\s+//;
+                    $tempcomment =~ s/\s+$//;
+                    if ($comments_struct eq 'string') {
+                        $self->{GameComments}->{$movecount.$color} .= 
+                            " " . $tempcomment;
+                    }
+                    elsif ($comments_struct eq 'array') {
+                        push @{$self->{GameComments}->{$movecount.$color}},
+                            $tempcomment;
+                    }
+                    else { # hol
+                        $tempcomment =~ m/^(.)/;
+                        my $comment_type ='unknown';
+                        $comment_type = $comment_types{$1}
+                        if ($1 and exists $comment_types{$1});
+                            push @{$self->{GameComments}->{$movecount.$color}->{$comment_type}} , $tempcomment;
+                        }
+                    # ---- end 0.07 changes
+                }
+            }
+            elsif ( m/\G(\S+\s*)/mgc ) {
+                if ($log_errors) {
+                    $self->{GameErrors}->{$movecount.$color} .= " " . $1;
+                    $self->{GameErrors}->{$movecount.$color} =~ tr/\r//d;
+                    $self->{GameErrors}->{$movecount.$color} =~ s/\n/ /g;
+                }    
+            }
+        }
     }
     return 1;
 }
@@ -1351,6 +1349,7 @@ Thanks to
 - Hugh S. Myers for advice, support, testing and brainstorming;
 - Damian Conway for the recursive Regular Expressions used to parse comments;
 - all people at PerlMonks (www.perlmonks.org) for advice and good developing environment.
+- Nathan Jeff for pointing out an insidious, hard-to-spot bug in my RegExes.
 
 =head1 COPYRIGHT
 

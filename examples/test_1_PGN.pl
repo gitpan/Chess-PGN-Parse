@@ -10,7 +10,7 @@ my $pgn = new Chess::PGN::Parse $filename
 while ($pgn->read_game()) {
 	print $pgn->event, " /  ", $pgn->white, " - ", $pgn->black, 
 		" : ", $pgn->result, "\n";
-	if ($pgn->parse_game()) {
+	if ($pgn->parse_game() && $pgn->moves) {
 		print join(" ", @{$pgn->moves}), "\n"; 
 	}
 	print "-" x 60, "\n\n";
