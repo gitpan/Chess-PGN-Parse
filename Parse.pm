@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.10'; # 23-Dec-2002
+our $VERSION = '0.11'; # 05-Jul-2003
 
 =head1 NAME
 
@@ -847,6 +847,9 @@ sub _formatted_tag {
                      # If the game was parsed, returns a clean list
                      # of moves, else the unparsed text
 
+ comments => 'no'    # Default 'no'. Output the game comments.
+                     # Requires the 'game' option
+ 
 =cut
 
 my %switchcolor = ('w' => 'b', 'b' => 'w');
@@ -857,6 +860,16 @@ sub standard_PGN {
     my @tags = $self->_get_tags($params);
     my $out ="";
     my $nl ="\n";
+    my $out_game = 'yes';
+    $out_game = 0 if
+        exists $params->{game} 
+            and (lc($params->{game}) ne 'yes');
+    
+    my $out_comments = 0;
+    $out_comments = 'yes' if $out_game 
+                and (exists $params->{comments} 
+                and (lc($params->{comments}) eq 'yes'));
+    
     $nl = $params->{nl} if exists $params->{nl};
     my $format = _get_format($params);
     for (@tags) {
@@ -868,9 +881,7 @@ sub standard_PGN {
     if (@tags) {
         $out .= $nl;
     }
-    return $out 
-        if (exists $params->{game} 
-            and (lc $params->{game} !~ /$(?:[Yy][Ee][Ss]|1)$/)); 
+    return $out unless $out_game;
     if (defined $self->{GameMoves}) { # if parsed
         my $count = 1;
         my $color = 'w';
@@ -893,11 +904,33 @@ sub standard_PGN {
                 $out .= ' ';
                 $len++;
             }
-            $out .= "$_";
+            $out .= $_;
             $len += length($_);
+            if ($out_comments 
+                && exists $self->{GameComments}{"${count}${color}"}) {
+                my $comment = $self->{GameComments}{"${count}${color}"};
+                # 
+                # deal with comment length here
+                # 
+                if ($len >= 75) {
+                    $len = 0;
+                    $out .= $nl;
+                }
+                while ($len + length($comment) > 75) {
+                    my $delta = 75 - $len;
+                    $delta = 0 if $delta < 0;
+                    my ($portion) = $comment =~ /^(.{1,$delta})\W/;
+                    $out .= $portion;
+                    $len = 0;
+                    $out .= $nl;
+                    $comment = substr($comment, length($portion) +1);
+                }
+                $out .= $comment;
+                $len += length($comment);
+            }
             $color = $switchcolor{$color};
             if ($len >= 75) {
-                $len =0;
+                $len = 0;
                 $out .= $nl;
             }
         }

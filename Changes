@@ -1,5 +1,8 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.11 05-Jul-2003
+    - Added feature in standard_PGN(). Now it can also
+      print comments
 0.10 23-Dec-2002
     - Changed behavior in parse_game. Now the array in moves() is 
     always initialized and the method returns a valid array also when

@@ -32,21 +32,23 @@ my $pgn = new Chess::PGN::Parse undef, $text
     || die "can't create new object \n";
 $pgn->read_game();
 
-print "unparsed PGN format \n";
-print $pgn->standard_PGN();
-$pgn->parse_game();
+print $pgn->standard_PGN({
+        comments => 'yes',
+        game => 'yes'
+});   
 
-print "\nstandard PGN format\n";
+print "\n\n";
 
-print $pgn->standard_PGN();
-
-print "\ncustomized PGN format\n";
+$pgn->parse_game({save_comments => 'yes'});
 
 print $pgn->standard_PGN({
-    brackets=> "<b>[</b>|<b>]</b>", # HTML format
-    quotes => "<I>|</I>", 
-    # quotes =>"\0|\0",             # no quotes
-    nl =>"<br>\n",
-    # all_tags=>1,  # if uncommented, prints all tags
-    tags => [qw(White Black Result)], # prints only three tags
+        comments => 'no',
+        game => 'yes'
+});   
+
+print "\n\n";
+
+print $pgn->standard_PGN({
+        comments => 'yes',
+        game => 'yes'
 });   
