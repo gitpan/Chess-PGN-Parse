@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.11'; # 05-Jul-2003
+our $VERSION = '0.12'; # 06-Jul-2003
 
 =head1 NAME
 
@@ -861,12 +861,12 @@ sub standard_PGN {
     my $out ="";
     my $nl ="\n";
     my $out_game = 'yes';
-    $out_game = 0 if
+    $out_game = 0 if                              # 0.11
         exists $params->{game} 
             and (lc($params->{game}) ne 'yes');
     
-    my $out_comments = 0;
-    $out_comments = 'yes' if $out_game 
+    my $out_comments = 0;                         # 0.11
+    $out_comments = 'yes' if $out_game            # 0.11
                 and (exists $params->{comments} 
                 and (lc($params->{comments}) eq 'yes'));
     
@@ -906,9 +906,10 @@ sub standard_PGN {
             }
             $out .= $_;
             $len += length($_);
-            if ($out_comments 
-                && exists $self->{GameComments}{"${count}${color}"}) {
-                my $comment = $self->{GameComments}{"${count}${color}"};
+            if ($out_comments                                               # 0.11
+                && exists $self->{GameComments}{($count-1)."${color}"}) {   # 0.12
+                my $comment = $self->{GameComments}{($count-1)."${color}"}; # 0.12
+                my $needs_nl = $comment =~ /^\s*;/;
                 # 
                 # deal with comment length here
                 # 
@@ -926,6 +927,7 @@ sub standard_PGN {
                     $comment = substr($comment, length($portion) +1);
                 }
                 $out .= $comment;
+                $out .= $nl if $needs_nl;
                 $len += length($comment);
             }
             $color = $switchcolor{$color};
