@@ -1,5 +1,8 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.13 07-Jul-2003
+    - Minor bug in parse_game(). {save_comments => 'no'} did
+      not work as expected. Fixed.
 0.12 06-Jul-2003
     - Fixed bug in standard_PGN() when printing comments.
 0.11 05-Jul-2003

@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.12'; # 06-Jul-2003
+our $VERSION = '0.13'; # 07-Jul-2003
 
 =head1 NAME
 
@@ -1109,8 +1109,8 @@ my %comment_types = (
 sub parse_game {
     my $self = shift;
     my $params = shift;
-    my $save_comments = (exists $params->{save_comments})
-        and ($params->{save_comments} =~ /^(?:yes|1)$/);
+    my $save_comments = ((exists $params->{save_comments})
+        and ($params->{save_comments} =~ /^(?:yes|1)$/));
     my $log_errors = (exists $params->{log_errors}) 
         and ($params->{log_errors} =~ /^(?:yes|1)$/);
     return undef unless $self->{gamedescr}{Game};
