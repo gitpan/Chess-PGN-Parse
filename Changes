@@ -1,5 +1,10 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.14 08-Jul-2003
+    - Added method add_comments(), to add comments to an
+      already parsed game;
+    - Modified bahavior of standard_PGN() so that it can use
+      derived class methods for comments.
 0.13 07-Jul-2003
     - Minor bug in parse_game(). {save_comments => 'no'} did
       not work as expected. Fixed.

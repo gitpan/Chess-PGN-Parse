@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.13'; # 07-Jul-2003
+our $VERSION = '0.14'; # 08-Jul-2003
 
 =head1 NAME
 
@@ -907,8 +907,8 @@ sub standard_PGN {
             $out .= $_;
             $len += length($_);
             if ($out_comments                                               # 0.11
-                && exists $self->{GameComments}{($count-1)."${color}"}) {   # 0.12
-                my $comment = $self->{GameComments}{($count-1)."${color}"}; # 0.12
+                && exists $self->comments->{($count-1)."${color}"}) {   # 0.12
+                my $comment = $self->comments->{($count-1)."${color}"}; # 0.12
                 my $needs_nl = $comment =~ /^\s*;/;
                 # 
                 # deal with comment length here
@@ -1212,6 +1212,51 @@ sub parse_game {
     }
     return 1;
 }
+
+=item add_comment()
+
+Allows inserting comments for an already parsed game;
+it accepts comments passed as an anonymous hash.
+An optional second parameter sets the storage type.
+They are the same as for parse_game();
+  'string'  (default) all comments for a given move are 
+            concatenated together
+  'array'   each comment for a given move is stored as
+            an array element
+  'hol'     Comments are stored in a hash of lists
+            different for each comment type.
+=cut
+
+sub add_comments {
+    my $self = shift;
+    my $comments = shift;
+    my $comment_struct = shift;
+    $comment_struct = 'string' 
+        unless ($comment_struct && ($comment_struct =~ /^hol|array$/));
+    if ($self->moves && $comments  && (ref $comments eq 'HASH')) {
+        for (keys %$comments) {
+            next unless /^\d+(?:w|b)$/;
+            if ($comment_struct eq 'string') {
+               $self->{GameComments}->{$_} .= 
+                  " " . $comments->{$_};
+            }
+            elsif ($comment_struct eq 'array') {
+                push @{$self->{GameComments}->{$_}},
+                  $comments->{$_};
+            }
+            else { # hol
+                $comments->{$_} =~ m/^(.)/;
+                my $comment_type ='unknown';
+                $comment_type = $comment_types{$1}
+                   if ($1 and exists $comment_types{$1});
+                push @{$self->{GameComments}->{$_}->{$comment_type}} , 
+                      $comments->{$_};
+            }
+        }
+    }
+    return $self->{GameComments};        
+}
+
 } # end closure for parse_game()
 
 =item shrink_epd()
