@@ -1,0 +1,29 @@
+Revision history for Perl extension Chess::PGN::Parse.
+
+0.06 16-Feb-2002
+	- improved "new" method. Input can be either a string 
+      or a file.
+	- output to standard PGN format. Can also be customized for
+	  special output such as HTML. Selection of tags for output
+	  is supported.
+
+0.05 5-Feb-2002
+	- installation procedure, ready for distribution
+
+0.04 4-Feb-2002
+	- maintenance version. Small bug fixed in parse_game()
+
+0.03 26-Jan-2002
+	- remove dependency on Regexp::Common
+	  (recursive RegEx extracted and integrated)
+	  Twice as fast as the previous version!
+	- bug fix in shrink_epd and expand_epd
+
+0.02 24-Jan-2002
+	- Parser re-written with Regular Expressions
+	- use Regexp::Common to parse nested parentheses
+
+0.01  21-Jan-2002
+	- original version; 
+	- Working parser. Complete but quite slow 
+
