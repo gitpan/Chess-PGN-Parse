@@ -1,5 +1,35 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.07 28-Mar-2002
+	- a new read_game() method to support irregular input 
+      1. no blank line between tags and moves;
+      2. no blank line between games
+      3. blank line(s) before a game (start of file)
+      4. multiple tags in the same line
+      5. tags spanning over more lines 
+      6. No tags (only moves). 
+         (can't cumulate with rule 2)
+      7. semicolon comments outside the moves. 
+    - The above changes make it possible to deal with
+      Recursive Annotated Variations .
+    - old read_game() renamed into read_standard_game()
+	- modified parse_game() to support non numbered input games
+	- modified standard_PGN() to output a blank line between
+	  tags and game.
+	- Changed dependency. IO::File instead of FileHandle.
+    - added stronger structures to store comments.
+	  Calling parse_game(), you can specify if the comments
+	  are stored as a 'string' (default), an 'array' of strings,
+	  or a 'hol', hash of lists, to identify which type of
+	  comment it is (RAV, NAG, brace, semicolon, escaped).
+    - fixed bug in _init(). $self->{GameErrors} was not 
+      initialized after each parse.
+    - fixed bug in parse_game(). FirstMove was not set correctly for
+      games starting with numbers bigger than 1;
+    - Added handler for the above move numbers in standard_PGN();
+	- extended documentation to reflect the changes and
+	  explain the module functionality.
+      
 0.06 16-Feb-2002
 	- improved "new" method. Input can be either a string 
       or a file.

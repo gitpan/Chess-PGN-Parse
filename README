@@ -68,25 +68,29 @@ USAGE
             print Data::Dumper->Dump([\@games}],["games"]), "\n ";
 
 DISTRIBUTION LIST
-     Changes                     A change log for this module
-     MANIFEST                    The list of included files
-     README                      This file
-     Makefile.PL                 The Perl makefile
-     Parse.pm                    The module itself
-     test.pl                     The test script
-     examples/kk_2001.pgn        a sample collection of PGN games
-     examples/kk_game4_test.pgn  a sample PGN file with most of the strange things
+   Changes                       A change log for this module
+   MANIFEST                      The list of included files
+   README                        This file
+   Makefile.PL                   The Perl makefile
+   Parse.pm                      The module itself
+   test.pl                       The test script
+   examples/kk_2001.pgn          a sample collection of PGN games
+   examples/kk_game4_test.pgn    a sample PGN file with most of the strange things
                                  that a PGN could have, including errors
-     examples/test_1_PGN.pl      a test script to show some features
-     examples/test_2_PGN.pl      a more advanced test script
-     examples/test_3_PGN.pl      a test script to parse a PGN from string
-     examples/test_4_PGN.pl      a more advanced PGN string capability
+   examples/test_1_PGN.pl        a test script to show some features
+   examples/test_2_PGN.pl        a more advanced test script
+   examples/test_3_PGN.pl        a test script to parse a PGN from string
+   examples/test_4_PGN.pl        a more advanced PGN string capability
                                  with also examples of customized output
-
+   examples/test_non_standard.pl Another test with some unorthodox input
+                                 to demonstrate how the enhanced version
+                                 can handle these things.
+   examples/test_recursion.pl    A test of RAV recursive parsing
+   
 AUTHOR
     Chess::PGN::Parse is copyright (C) Giuseppe Maxia 2002. All rights
     reserved. Released under the GPL (GNU General Public License) version 2,
     April 1991.
 
-    My contact for bugs, comments, advice: gmax@karma.oltrelinux.com
+    My contact for bugs, comments, advice: gmax@cpan.org
 

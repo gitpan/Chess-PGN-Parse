@@ -28,7 +28,7 @@ package Chess::PGN::Parse;
 use strict;
 use warnings;
 require 5.006;
-use FileHandle;
+use IO::File;
 
 require Exporter;
 
@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.06'; # 16-Feb-2002
+our $VERSION = '0.07'; # 28-Mar-2002
 
 =head1 NAME
 
@@ -44,18 +44,18 @@ Chess::PGN::Parse - reads and parses PGN (Portable Game Notation) Chess files
 
 =head1 SYNOPSIS
 
-	use Chess::PGN::Parse;
-	my $pgnfile = "kk_2001.pgn";
-	my $pgn = new Chess::PGN::Parse $pgnfile 
-		or die "can't open $pgnfile\n";
-	while ($pgn->read_game()) {
-		print $pgn->white, ", " , $pgn->black, ", ", 
-			$pgn->result, ", ",
-			$pgn->game, "\n";
-	}
+    use Chess::PGN::Parse;
+    my $pgnfile = "kk_2001.pgn";
+    my $pgn = new Chess::PGN::Parse $pgnfile 
+        or die "can't open $pgnfile\n";
+    while ($pgn->read_game()) {
+        print $pgn->white, ", " , $pgn->black, ", ", 
+            $pgn->result, ", ",
+            $pgn->game, "\n";
+    }
 
 
-	use Chess::PGN::Parse;
+    use Chess::PGN::Parse;
     my $text ="";
     {
         local $/ = undef;
@@ -64,18 +64,18 @@ Chess::PGN::Parse - reads and parses PGN (Portable Game Notation) Chess files
         close $text;
     }
     # reads from string instead of a file
-	my $pgn = new Chess::PGN::Parse undef, $text; 
-	while ($pgn->read_game()) {
-		print $pgn->white, ", " , $pgn->black, ", ", 
-			$pgn->result, ", ",
-			$pgn->game, "\n";
-	}
+    my $pgn = new Chess::PGN::Parse undef, $text; 
+    while ($pgn->read_game()) {
+        print $pgn->white, ", " , $pgn->black, ", ", 
+            $pgn->result, ", ",
+            $pgn->game, "\n";
+    }
 
-	use Chess::PGN::Parse;
-	my $pgnfile = "kk_2001.pgn";
-	my $pgn = new Chess::PGN::Parse $pgnfile 
-		or die "can't open $pgnfile\n";
-	my @games = $pgn->smart_read_all();
+    use Chess::PGN::Parse;
+    my $pgnfile = "kk_2001.pgn";
+    my $pgn = new Chess::PGN::Parse $pgnfile 
+        or die "can't open $pgnfile\n";
+    my @games = $pgn->smart_read_all();
 
 
 =head1 DESCRIPTION
@@ -85,30 +85,111 @@ PGN files contain chess games produced by chess programs following a standard fo
 Parsing simple PGN files is not difficult. However, dealing with some of the intricacies of the Standard is less than trivial. This module offers a clean handle toward reading and parsing complex PGN files.
 
 A PGN file has several B<tags>, which are key/values pairs at the header of each game, in the format 
-	[key "value"]
+    [key "value"]
 
 After the header, the game follows. A string of numbered chess moves, optionally interrupted by braced comments and recursive parenthesized variants and comments. While dealing with simple braced comments is straightforward, parsing nested comments can give you more than a headache.
 
 Chess::PGN::Parse most immediate methods are:
-	read_game() reads one game, separating the tags and the game text.
+    read_game() reads one game, separating the tags and the game text.
 
-	parse_game() parse the current game, and stores the moves into an 
-		array and optionally saves the comments into an array of hashes
-		for furter usage. It can deal with nested comments and recursive
-		variations.
+    parse_game() parse the current game, and stores the moves into an 
+        array and optionally saves the comments into an array of hashes
+        for furter usage. It can deal with nested comments and recursive
+        variations.
 
-	quick_parse_game() Same as the above, but doesn't save the comments, 
-		which are just stripped	from the text. It can't deal with nested
-		comments. Should be the preferred method when we know that we are
-		dealing with simple PGNs.
+    quick_parse_game() Same as the above, but doesn't save the comments, 
+        which are just stripped    from the text. It can't deal with nested
+        comments. Should be the preferred method when we know that we are
+        dealing with simple PGNs.
 
-	smart_parse_game() Best of the above methods. A  preliminary check
-		will call parse_game() or quick_parse_game(), depending on the
-		presence of nested comments in the game.
+    smart_parse_game() Best of the above methods. A  preliminary check
+        will call parse_game() or quick_parse_game(), depending on the
+        presence of nested comments in the game.
 
-	read_all(), quick_read_all(), smart_read_all() will read all the records
-		in the current PGN file and return an array of hashes with all the
-		parsed details from the games.
+    read_all(), quick_read_all(), smart_read_all() will read all the records
+        in the current PGN file and return an array of hashes with all the
+        parsed details from the games.
+
+=head2 Parsing games
+
+Parsing PGN games is actually two actions: reading and parsing. 
+The reading will only identify the two components of a game, i.e.
+the tags and the moves text. During this phase, the tags are
+decomposed and stored into an internal hash for future use,
+while the game text is left untouched.
+
+Reading a game is accomplished through the read_game() method,
+which will identify not only the standard game format but also
+some unorthodox cases, such as games with no separating blank line
+between tags and moves, games with no blank lines at the end of
+the moves, leading blank lines, tags spanning over several lines
+and some minor quibbles.
+If you know that your games don't have any of these problems,
+you might choose the read_standard_game() method, which is a
+bit faster.
+
+After the reading, you can either use the game text as it is,
+or you can ask for parsing. What is it? Parsing is the process
+of identifying and isolating the moves from the rest of the game
+text, such as comments and recursive variations. This process 
+can be accomplished in two ways: using quick_parse_game(), the
+non moves elements are just stripped off and discarded, leaving
+an array of bare moves. If the comments and the recursive 
+variations (RAV) are valuable to you, you can use the parse_game()
+method, which will strip the excess text, but it can store it
+into an appropriate data structure. Passing the option 
+{save_comments =>'yes'} to parse_game(), game comments will
+be stored into a hash, having as key the move number + color.
+Multiple comments for the same move are appended to the previous
+one. If this structure doesn't provide enough details, a further
+option {comments_struct => 'array'} will store an array of
+comments for each move. Even more details are available using
+{comments_struct => 'hol'}, which will trigger the creation of
+a hash of lists (hol), where the key is the comment type (RAV, 
+NAG, brace, semicolon, escaped) and the value is a list of
+homogeneous comments belonging to the same move.
+
+A further option {log_errors => 'yes'} will save the errors
+into a structure similar to the comments (no options on the
+format, though. All errors for one given move are just a 
+string). What are errors? Just anything that is not recognized
+as any of the previous elements. Not a move, or a move number,
+or a comment, either text or recursive. Anything that the 
+parser cannot actively classify as 'known' will be stored
+as error.
+
+=head2 Getting the parsed values
+
+At the end of the exercise, you can access the components 
+through some standard methods.
+The standard tags have their direct access method (white,
+black, site, event, date, result, round). More methods give 
+access to some commonly used elements: 
+game() is the unparsed text, moves() returns an array of parsed
+moves, without move numbers, comments() and errors() return
+the relative structures after parsing.
+About game(), it's worth mentioning that, using quick_parse_game(),
+the game text is stripped of all non moves elements. This is
+an intended feature, to privilege speed. If you need to preserve
+the original game text after parsing, either copy it before
+calling quick_parse_game() or use parse_game() instead.
+
+=head2 Recursive Parsing
+
+PGN games may include RAV (Recursive Annotated Variations) which
+is just game text inside parentheses.
+This module can recognize RAV sequences and store them as comments.
+One of the things you can do with these sequences is to parse
+them again and get bare moves that you can feed to a chess engine
+or a move analyzer (Chess::PGN::EPD by H.S.Myers is one of them).
+Chess::PGN::Parse does not directly support recursive parsing of
+games, but it makes it possible. 
+Parse a game, saving the comments as hash of list (see above), 
+and then check for comments that are of 'RAV' type. For each
+entry in the comments array, strip the surrounding parentheses
+and create a new Chess::PGN::Parse object with that text.
+Easier to do than to describe, actually. For an example of this
+technique, check the file F<examples/test_recursive.pl>.
 
 =head2 EXPORT
 
@@ -116,7 +197,7 @@ new, STR, read_game, tags, event, site, white, black, round, date, result, game 
 
 =head2 DEPENDENCIES
 
-FileHandle
+IO::File
 
 =head1 Class methods
 
@@ -125,48 +206,48 @@ FileHandle
 =item new()
 
 Create a new Chess::PGN::Parse object (requires file name)
-	my $pgn = Chess::PGN::Parse->new "filename.pgn" 
-		or die "no such file \n";
+    my $pgn = Chess::PGN::Parse->new "filename.pgn" 
+        or die "no such file \n";
 
 =cut
 
 my @SevenTagsRoster = qw(Event Site Date Round White Black Result);
 
 sub new {
-	my $class = shift;
-	my $filename = shift;
+    my $class = shift;
+    my $filename = shift;
     my $fh = undef;
     if (defined $filename) {
-	    $fh = new FileHandle "< $filename" 
+        $fh = new IO::File "< $filename" 
             || return undef;
     }
     else {
         my $text = shift;
         $fh = new StringHandle $text;
     }
-	my $self = 	bless  {
-		GameMoves =>[],		# game moves
-		GameComments =>{},	# comments with reference to the move
-		gamedescr => {},	# will contain the PGN tags
-		GameErrors => {},	# will contain the parsing errors
-		fh	=> \$fh			# filehandle to the PGN file
-	}, $class;
-	return $self;
+    my $self =     bless  {
+        GameMoves =>[],        # game moves
+        GameComments =>{},    # comments with reference to the move
+        gamedescr => {},    # will contain the PGN tags
+        GameErrors => {},    # will contain the parsing errors
+        fh    => \$fh            # filehandle to the PGN file
+    }, $class;
+    return $self;
 }
 
 =for internal use
-	the object destroyer cleans possible hanging references
+    the object destroyer cleans possible hanging references
 
 =cut
 
 sub DESTROY {
-	my $self = shift;
-	undef $self->{GameComments};
-	undef $self->{GameErrors};
-	undef $self->{gamedescr};
-	undef $self->{GameMoves};
-	${$self->{fh}}->close();
-	undef $self->{fh};
+    my $self = shift;
+    undef $self->{GameComments};
+    undef $self->{GameErrors};
+    undef $self->{gamedescr};
+    undef $self->{GameMoves};
+    ${$self->{fh}}->close();
+    undef $self->{fh};
 }
 my %SymbolicAnnotationGlyph = (
 '$1' => '!',
@@ -185,36 +266,36 @@ returns the corresponding Numeric Annotation Glyph
 =cut
 
 sub NAG {
-	my $item = shift;
-	return undef unless $item =~ /\$?(\d+)/;
-	return undef if ($1 > 139) or ($1 < 0);
-	unless (scalar keys %NumericAnnotationGlyph) {
-		local $/ = undef;
-		eval <DATA>;
-	}
-	my $nag_ref = \%NumericAnnotationGlyph;
-	if (($1 > 0) and ($1 <=6)) {
-		$nag_ref = \%SymbolicAnnotationGlyph
-	}
-	if ($item =~ /^\$/) {
-		return $nag_ref->{$item}
-	}
-	else {
-		return $nag_ref->{'$'.$item}
-	}
+    my $item = shift;
+    return undef unless $item =~ /\$?(\d+)/;
+    return undef if ($1 > 139) or ($1 < 0);
+    unless (scalar keys %NumericAnnotationGlyph) {
+        local $/ = undef;
+        eval <DATA>;
+    }
+    my $nag_ref = \%NumericAnnotationGlyph;
+    if (($1 > 0) and ($1 <=6)) {
+        $nag_ref = \%SymbolicAnnotationGlyph
+    }
+    if ($item =~ /^\$/) {
+        return $nag_ref->{$item}
+    }
+    else {
+        return $nag_ref->{'$'.$item}
+    }
 }
 
 =item STR()
 
 returns the Seven Tags Roster array
 
-	@array = $pgn->STR();
-	@array = PGNParser::STR();
+    @array = $pgn->STR();
+    @array = PGNParser::STR();
 
 =cut
 
 sub STR {
-	return @SevenTagsRoster;
+    return @SevenTagsRoster;
 }
 
 =item event()
@@ -280,73 +361,73 @@ returns a hash reference to the game errors (the key is the move number and the 
 =cut
 
 sub event {
-	my $self = shift;
-	return $self->{gamedescr}{Event}
+    my $self = shift;
+    return $self->{gamedescr}{Event}
 }
 
 sub site {
-	my $self = shift;
-	return $self->{gamedescr}{Site}
+    my $self = shift;
+    return $self->{gamedescr}{Site}
 }
 
 sub date {
-	my $self = shift;
-	return $self->{gamedescr}{Date}
+    my $self = shift;
+    return $self->{gamedescr}{Date}
 }
 
 sub white {
-	my $self = shift;
-	return $self->{gamedescr}{White}
+    my $self = shift;
+    return $self->{gamedescr}{White}
 }
 
 sub black {
-	my $self = shift;
-	return $self->{gamedescr}{Black}
+    my $self = shift;
+    return $self->{gamedescr}{Black}
 }
 
 sub result {
-	my $self = shift;
-	return $self->{gamedescr}{Result}
+    my $self = shift;
+    return $self->{gamedescr}{Result}
 }
 
 sub round {
-	my $self = shift;
-	return $self->{gamedescr}{Round}
+    my $self = shift;
+    return $self->{gamedescr}{Round}
 }
 
 sub time {
-	my $self = shift;
-	return $self->{gamedescr}{Time}
+    my $self = shift;
+    return $self->{gamedescr}{Time}
 }
 
 sub eventdate {
-	my $self = shift;
-	return $self->{gamedescr}{EventDate}
+    my $self = shift;
+    return $self->{gamedescr}{EventDate}
 }
 
 sub eco {
-	my $self = shift;
-	return $self->{gamedescr}{ECO}
+    my $self = shift;
+    return $self->{gamedescr}{ECO}
 }
 
 sub game {
-	my $self = shift;
-	return $self->{gamedescr}{Game}
+    my $self = shift;
+    return $self->{gamedescr}{Game}
 }
 
 sub moves {
-	my $self = shift;
-	return $self->{GameMoves};
+    my $self = shift;
+    return $self->{GameMoves};
 }
 
 sub errors {
-	my $self = shift;
-	return $self->{GameErrors};
+    my $self = shift;
+    return $self->{GameErrors};
 }
 
 sub comments {
-	my $self = shift;
-	return $self->{GameComments};
+    my $self = shift;
+    return $self->{GameComments};
 }
 
 =for internal use
@@ -355,27 +436,28 @@ initialize the pgn object fields.
 =cut
 
 sub _init {
-	my $self = shift;
-	for (keys %{$self->{gamedescr}}) {
-		$self->{gamedescr}{$_} = ""
-	}
-	delete $self->{gamedescr}{FirstMove} 
-		if exists $self->{gamedescr}{FirstMove};
-	undef $self->{GameMoves};
-	undef $self->{GameComments};
+    my $self = shift;
+    for (keys %{$self->{gamedescr}}) {
+        $self->{gamedescr}{$_} = ""
+    }
+    delete $self->{gamedescr}{FirstMove} 
+        if exists $self->{gamedescr}{FirstMove};
+    undef $self->{GameMoves};
+    undef $self->{GameComments};
+    undef $self->{GameErrors}; # 0.07
 }
 
 =item tags()
-	
+    
 returns a hash reference to all the parsed tags
 
-	$hash_ref = $pgn->tags();
+    $hash_ref = $pgn->tags();
 
 =cut
 
 sub tags {
-	my $self = shift;
-	return \%{$self->{gamedescr}};
+    my $self = shift;
+    return \%{$self->{gamedescr}};
 }
 
 =item read_all()
@@ -385,23 +467,23 @@ Each hash item contains both the raw data and the parsed moves and comments
 
 Same parameters as for parse_game(). Default : discard comments
 
-	my $games_ref = $pgn->read_all();
+    my $games_ref = $pgn->read_all();
 
 =cut
 
 sub read_all {
-	my $self=shift;
-	my $params = shift;
-	my @games =(); 
-	while ($self->read_game()) {
-		$self->parse_game($params);
-		my %gd = %{$self->{gamedescr}};
-		$gd{GameComments} = $self->{GameComments};
-		$gd{GameErrors} = $self->{GameErrors};
-		$gd{GameMoves} = $self->{GameMoves};
-		push @games, \%gd;
-	}
-	return \@games;
+    my $self=shift;
+    my $params = shift;
+    my @games =(); 
+    while ($self->read_game()) {
+        $self->parse_game($params);
+        my %gd = %{$self->{gamedescr}};
+        $gd{GameComments} = $self->{GameComments};
+        $gd{GameErrors} = $self->{GameErrors};
+        $gd{GameMoves} = $self->{GameMoves};
+        push @games, \%gd;
+    }
+    return \@games;
 }
 
 =item quick_read_all()
@@ -410,21 +492,21 @@ Will read and quick parse all the games in the current file and return a referen
 Each hash item contains both the raw data and the parsed moves
 Comments are discarded. Same parameters as for quick_parse_game().
 
-	my $games_ref = $pgn->quick_read_all();
+    my $games_ref = $pgn->quick_read_all();
 
 =cut
 
 sub quick_read_all {
-	my $self=shift;
-	my $params = shift;
-	my @games =(); 
-	while ($self->read_game()) {
-		$self->quick_parse_game($params);
-		my %gd = %{$self->{gamedescr}};
-		$gd{GameMoves} = $self->{GameMoves};
-		push @games, \%gd;
-	}
-	return \@games;
+    my $self=shift;
+    my $params = shift;
+    my @games =(); 
+    while ($self->read_game()) {
+        $self->quick_parse_game($params);
+        my %gd = %{$self->{gamedescr}};
+        $gd{GameMoves} = $self->{GameMoves};
+        push @games, \%gd;
+    }
+    return \@games;
 }
 
 =item smart_read_all()
@@ -433,22 +515,23 @@ Will read and quick parse all the games in the current file and return a referen
 Each hash item contains both the raw data and the parsed moves
 Comments are discarded. Calls smart_read_game() to decide which method is best to parse each given game.
 
-	my $games_ref = $pgn->smart_read_all();
+    my $games_ref = $pgn->smart_read_all();
 
 =cut
 
 sub smart_read_all {
-	my $self=shift;
-	my $params = shift;
-	my @games =(); 
-	while ($self->read_game()) {
-		$self->smart_parse_game($params);
-		my %gd = %{$self->{gamedescr}};
-		$gd{GameMoves} = $self->{GameMoves};
-		push @games, \%gd;
-	}
-	return \@games;
+    my $self=shift;
+    my $params = shift;
+    my @games =(); 
+    while ($self->read_game()) {
+        $self->smart_parse_game($params);
+        my %gd = %{$self->{gamedescr}};
+        $gd{GameMoves} = $self->{GameMoves};
+        push @games, \%gd;
+    }
+    return \@games;
 }
+
 
 =item read_game()
 
@@ -456,40 +539,190 @@ reads the next game from the given PGN file.
 Returns TRUE (1) if successful (= a game was read)
 or FALSE (0) if no more games are available or
 an unexpected EOF occurred before the end of parsing
-	
-	while ($pgn->read_game()) {
-		do_something_smart;
-	}
-
+    
+    while ($pgn->read_game()) {
+        do_something_smart;
+    }
+    
+It can read standard and in some cases even non-standard PGN 
+games. The following deviance from the standard are handled:
+     
+    1. no blank line between tags and moves;
+    2. no blank line between games
+    3. blank line(s) before a game (start of file)
+    4. multiple tags in the same line
+    5. tags spanning over more lines 
+       (can't cumulate with rule 4)
+    6. No tags (only moves). 
+       (can't cumulate with rule 2)
+    7. comments (starting with ";") outside the game text
+    
 =cut
 
+#
+# read_game() introduced in 0.07
+#
+{ #closure for read_game
+# this is the memory between loops. The
+# reading engine recognizes some elements
+# one line after.
+# For example, game text ends when we
+# read tags from the input. At this moment,
+# we have to return from the method, but
+# we must keep in memory what we have last read.
+# This structure will also take care of the 
+# tags spanning over several lines.
+my %memory = (    
+        tag          => '',
+        utag         => 0, # = unfinished tag
+        game         => '',
+        tag_printed  => 0,
+        game_printed => 0,
+    );
+
+sub _process_game {
+     my $self = shift;
+     return 0 unless $memory{game};
+     $self->{gamedescr}{missing} .= 'tags' unless $memory{tag_printed};
+     $memory{tag_printed} = 0;
+     $self->{gamedescr}{Game} .= $memory{game}; 
+     $memory{game} ='';
+     $memory{game_printed} =1;
+     return 1;
+}
+
+sub _process_tag {
+    my $self = shift;
+    if ($memory{game}) {
+        $self->_process_game;
+    }
+    return 0 if $memory{utag};
+    if ($memory{tag} =~ tr/]// > 1) {
+        # deals with multiple tags in one line
+        $memory{tag} =~ s/\]\s?/\]\n/g;
+    }
+    while ($memory{tag} =~ /\[(\w+)\s+"(.*)"\]\s*/g) {
+        $self->{gamedescr}{$1} = $2;
+    }
+    $memory{tag_printed} =1;
+    $memory{tag} = '';
+    $memory{game_printed} = 0;
+}
+
 sub read_game {
-	my $self = shift;
-	my $fh = ${$self->{fh}};
-	$self->_init();
-	my $block = 1;
+    my $self = shift;
+    my $fh = ${$self->{fh}};
+    $self->_init();
+    $self->_process_tag if $memory{tag};
+    return $self->_process_game if $memory{game};
+    while (<$fh>) {
+        # handle semicolon comments
+        if (/^;/) {
+            if ($memory{game_printed} or (! $memory{game})) { # between games
+                chomp;
+                $self->{gamedescr}{Comment} .= $_ ;
+                # comments between games are saved as tags
+            }
+            elsif ($memory{game}){
+                $memory{game} .= $_;
+            }
+            next; # anything else is discarded.
+        }
+        # normalize tagless games
+        if (/^\s*$/) {
+            if ($memory{game}) {
+                return $self->_process_game;
+            }
+            next;
+        }
+        # deals with multi-line tags
+        if ($memory{utag}) {
+            chomp;
+            $memory{tag} .= $_;
+            my $left = ($memory{tag} =~ tr/\[//);
+            my $right = ($memory{tag} =~ tr/\]//);
+            if ( $left == $right ) {
+                $memory{utag} =0;
+                $memory{tag_printed} =0;
+                $memory{tag} .= "\n";
+            }
+        }
+        elsif (/^\[/) {
+            my $left = tr/\[//;
+            my $right = tr/\]//;
+            if ($left == $right) {
+                $memory{tag} = $_;
+            }
+            else {
+                $memory{utag} = 1;
+                chomp;
+                $memory{tag} = $_;
+                $memory{tag_printed} =0;
+            }
+        }
+        else {
+            s/^\s*//;
+            $memory{game} .= $_;
+        }
+        if ($memory{tag}) {
+            return $self->_process_game if $memory{game};
+            $self->_process_tag;
+        }
+    }
+    if ($memory{tag}) {
+        $self->_process_tag;
+    }
+    if ($memory{game}) {
+        return $self->_process_game;
+    }
+    return 0;
+}
+} # end read_game() closure
+
+=item read_standard_game()
+
+reads the next game from the given PGN file.
+Returns TRUE (1) if successful (= a game was read)
+or FALSE (0) if no more games are available or
+an unexpected EOF occurred before the end of parsing
+    
+    while ($pgn->read_standard_game()) {
+        do_something_smart;
+    }
+
+This method deals only with well formed PGN games. Use
+the more forgiving read_game() for PGN files that don't
+fully respect the PGN standard.
+    
+=cut
+
+sub read_standard_game {
+    my $self = shift;
+    my $fh = ${$self->{fh}};
+    $self->_init();
+    my $block = 1;
     #return 0 if eof($fh); # changed in version 0.06
-	while (<$fh>) {
+    while (<$fh>) {
         return 0 unless defined $_; # 0.06
-		chomp;
-		$block = 0 if /^\s*$/;   
-		last unless $block;
-		last unless /\[(\w+)/;
-		my $tag = $1;
-		last unless /\"(.*)\"/; 
-		my $value = $1;
-		$self->{gamedescr}{$tag} = $value; 
-	}
-	$block = 1;
+        chomp;
+        $block = 0 if /^\s*$/;   
+        last unless $block;
+        last unless /\[(\w+)/;
+        my $tag = $1;
+        last unless /\"(.*)\"/; 
+        my $value = $1;
+        $self->{gamedescr}{$tag} = $value; 
+    }
+    $block = 1;
     #return 0 if eof($fh); # changed in version 0.06
     return 0 unless defined $_; # 0.06
-	while (<$fh>) {    
+    while (<$fh>) {    
         return 0 unless defined $_; # 0.06
-		$block = 0 if /^\s*$/; 
-		last unless $block; 
-		$self->{gamedescr}{Game} .= $_;
-	}
-	return 1;
+        $block = 0 if /^\s*$/; 
+        last unless $block; 
+        $self->{gamedescr}{Game} .= $_;
+    }
+    return 1;
 }
 
 =for internal use
@@ -632,12 +865,22 @@ sub standard_PGN {
         $out .= _formatted_tag($format, $_, $self->{gamedescr}{$_});
         $out .= $nl;
     }
+    if (@tags) {
+        $out .= $nl;
+    }
     return $out 
         if (exists $params->{game} 
             and (lc $params->{game} !~ /$(:?[Yy][Ee][Ss]|1)$/)); 
     if (defined $self->{GameMoves}) { # if parsed
         my $count = 1;
         my $color = 'w';
+        if ((defined $self->{gamedescr}{FirstMove})                # 0.07
+            and ($self->{gamedescr}{FirstMove} =~ m/(\d+)([bw])/)) # 0.07
+        {
+            $count = $1; # 0.07
+            $color = $2; # 0.07          
+            $out .= "$count\.\.\." if $color eq 'b'; # 0.07
+        }
         my $len = 0;
         for (@{$self->moves}) { # 
             if ($color eq 'w') {
@@ -674,14 +917,14 @@ Uses by default quick_parse_game(), unless recursive comments are found in the s
 =cut
 
 sub smart_parse_game {
-	my $self = shift;
-	my $params = shift;
-	if ($self->{gamedescr}{Game} =~ /\(/) {
-		$self->parse_game($params)
-	}
-	else {
-		$self->quick_parse_game($params)
-	}
+    my $self = shift;
+    my $params = shift;
+    if ($self->{gamedescr}{Game} =~ /\(/) {
+        $self->parse_game($params)
+    }
+    else {
+        $self->quick_parse_game($params)
+    }
 }
 
 =item quick_parse_game()
@@ -708,16 +951,16 @@ Parameters  (passed as a hash reference): check_moves = 'yes'|'no'. Default : no
 # ==============================================
 
 our $RE_parens = qr/
-	(?:(?:(?:[(](?:(?>[^)(]+)
-	|(??{$RE_parens}))*[)]))
-	|(?:(?!)))
-	/x;
+    (?:(?:(?:[(](?:(?>[^)(]+)
+    |(??{$RE_parens}))*[)]))
+    |(?:(?!)))
+    /x;
 
 our $RE_brace = qr/
-	(?:(?:(?:[{](?:(?>[^}{]+)
-	|(??{$RE_brace}))*[}]))
-	|(?:(?!)))
-	/x;
+    (?:(?:(?:[{](?:(?>[^}{]+)
+    |(??{$RE_brace}))*[}]))
+    |(?:(?!)))
+    /x;
 
 # ==============================================
 
@@ -740,36 +983,36 @@ my $RERAV       = $RE_parens;
 my $REcomment   = $RE_brace;
 
 sub quick_parse_game {
-	my $self = shift;
-	my $params = shift; # hash reference to parameters
-	$self->{gamedescr}{Game} =~ s/$REeolcomment//mg; # rm EOL comments
-	$self->{gamedescr}{Game} =~ s/$REescape//mgo; # rm escaped lines
-	$self->{gamedescr}{Game} =~ 
-		s/$REcomment//g;  # remove comments
-	$self->{gamedescr}{Game} =~ 
-		s/$RERAV//g;  	 # remove RAV
-	return 0 
-		if $self->{gamedescr}{Game} =~ 
-			/\(/; # the game still contains RAV
-	return 0 
-		if $self->{gamedescr}{Game} =~ 
-			/\{/; # undetected nested comments
-	$self->{gamedescr}{Game} =~ s/\n/ /g;		  # remove newlines
-	$self->{gamedescr}{Game} =~ 
-		s/\r/ /g;		  # remove return chars (DOS)
-	$self->{gamedescr}{Game} =~ s/$RENAG//go;	  # remove NAG
+    my $self = shift;
+    my $params = shift; # hash reference to parameters
+    $self->{gamedescr}{Game} =~ s/$REeolcomment//mg; # rm EOL comments
+    $self->{gamedescr}{Game} =~ s/$REescape//mgo; # rm escaped lines
+    $self->{gamedescr}{Game} =~ 
+        s/$REcomment//g;  # remove comments
+    $self->{gamedescr}{Game} =~ 
+        s/$RERAV//g;       # remove RAV
+    return 0 
+        if $self->{gamedescr}{Game} =~ 
+            /\(/; # the game still contains RAV
+    return 0 
+        if $self->{gamedescr}{Game} =~ 
+            /\{/; # undetected nested comments
+    $self->{gamedescr}{Game} =~ s/\n/ /g;          # remove newlines
+    $self->{gamedescr}{Game} =~ 
+        s/\r/ /g;          # remove return chars (DOS)
+    $self->{gamedescr}{Game} =~ s/$RENAG//go;      # remove NAG
     $self->{gamedescr}{Game} =~ s/\d+\.//g;       # remove numbers
     $self->{gamedescr}{Game} =~ s/\.\.(:?\.)?//g; # remove "..."
-	$self->{gamedescr}{Game} =~ s/$REresult\s*\Z//o;
-	my $REfilter = qr/\S/;
-	if (exists $params->{check_moves} 
-		and ($params->{check_moves} =~ /^(:?yes|1)$/)) 
-	{
-		$REfilter = $REanymove;
-	}
-	return undef unless $self->{gamedescr}{Game}; # discards empty games
-	$self->{GameMoves} = 
-		[grep { m/$REfilter/o } split /\s+/, $self->{gamedescr}{Game}];
+    $self->{gamedescr}{Game} =~ s/$REresult\s*\Z//o;
+    my $REfilter = qr/\S/;
+    if (exists $params->{check_moves} 
+        and ($params->{check_moves} =~ /^(:?yes|1)$/)) 
+    {
+        $REfilter = $REanymove;
+    }
+    return undef unless $self->{gamedescr}{Game}; # discards empty games
+    $self->{GameMoves} = 
+        [grep { m/$REfilter/o } split /\s+/, $self->{gamedescr}{Game}];
 }
 
 =item parse_game()
@@ -777,98 +1020,170 @@ sub quick_parse_game {
 Parses the current game (after read_game() was called).
 Accepts parameters as hash reference.
 
-	$pgn->parse_game(); # default save_comments => 'no'
+    $pgn->parse_game(); # default save_comments => 'no'
 
-	$pgn->parse_game({save_comments => 'yes'});
-	$pgn->parse_game({save_comments => 'yes', log_errors = 'yes'});
+    $pgn->parse_game({
+        save_comments => 'yes',
+        comments_struct => 'string'});
+    
+{comments_struct => 'string'} is the default value
+When 'comments_struct' is 'string', multiple comments 
+for the same move are concatenated to one string
+
+{comments_struct => 'array'}
+If 'array', comments are stored as an anonymous array, 
+one comment per element
+
+{comments_struct => 'hol'}
+If 'hol', comments are stored as a hash of lists, where 
+there is a list of comments for each comment type
+(NAG, RAV, braced, semicolon, escaped)
+   
+    $pgn->parse_game({save_comments => 'yes', 
+        log_errors => 'yes'});
 
 parse_game() implements a finite state machine on two assumptions:
 
-	1. No moves or move numbers are truncated at the end of a line;
-	2. the possible states in a PGN game are:
+    1. No moves or move numbers are truncated at the end of a line;
+    2. the possible states in a PGN game are:
 
-		a. move number
-		b. move
-		c. braced comment
-		d. EOL comment
-		e. Numeric Annotation Glyph
-		f. Recursive Annotated Variation
-		g. Result
-		h. unbraced comments (barewords, "!?+-=")
+        a. move number
+        b. move
+        c. braced comment
+        d. EOL comment
+        e. Numeric Annotation Glyph
+        f. Recursive Annotated Variation
+        g. Result
+        h. unbraced comments (barewords, "!?+-=")
 
-	items from "a" to "g" are actively parsed and recognized. 
-	Anything unrecognized goes into the "h" state and discarded
-	(or stored, if log_errors was requested)
+Items from "a" to "g" are actively parsed and recognized. 
+Anything unrecognized goes into the "h" state and discarded
+(or stored, if log_errors was requested)
 
 =cut
 
+{ # start closure for parse_game
+my %comment_types = (
+    '$' => 'NAG',
+    '(' => 'RAV',
+    '{' => 'brace',
+    '%' => 'escaped',
+    ';' => 'semicolon'
+);
 
 sub parse_game {
-	my $self = shift;
-	my $params = shift;
-	my $save_comments = (exists $params->{save_comments})
-		and ($params->{save_comments} =~ /^(:?yes|1)$/);
-	my $log_errors = (exists $params->{log_errors}) 
-		and ($params->{log_errors} =~ /^(:?yes|1)$/);
-	return undef unless $self->{gamedescr}{Game};
-	my $movecount = 0;
-	my $color = 'b';
-	$self->{gamedescr}{Game} =~ s/0\-0\-0/O-O-O/g;
-	$self->{gamedescr}{Game} =~ s/0\-0/O-O/g;
-	$self->{gamedescr}{Game} =~ s/$REresult\s*\Z//o;
+    my $self = shift;
+    my $params = shift;
+    my $save_comments = (exists $params->{save_comments})
+        and ($params->{save_comments} =~ /^(:?yes|1)$/);
+    my $log_errors = (exists $params->{log_errors}) 
+        and ($params->{log_errors} =~ /^(:?yes|1)$/);
+    return undef unless $self->{gamedescr}{Game};
+    my $movecount = 0;
+    my $color = 'b';
+    $self->{gamedescr}{Game} =~ s/0\-0\-0/O-O-O/g;
+    $self->{gamedescr}{Game} =~ s/0\-0/O-O/g;
+    $self->{gamedescr}{Game} =~ s/$REresult\s*\Z//o;
 
-	PARSER:
-	{
-		$self->{gamedescr}{Game} =~ m/\G($REnumber)\s*/mgc && do {
-			my $num=$1;
-			if (( $num =~ tr/\.//d) > 1) {
-				$color = 'w';
-			}
-			if ($movecount == 0) {
-				$movecount = $num;
-				$self->{gamedecr}{FirstMove} = $num.$switchcolor{$color}
-					unless $num.$switchcolor{$color} eq '1w';
-			}
-			elsif ($movecount == ($num -1)) {
-				$movecount++;
-			}
-			elsif ($movecount != $num) {
-				$self->{GameErrors}->{$movecount.$color} 
-					.= " invalid move sequence ($num <=> $movecount)";
-				$movecount++;
-			}
-			redo
-		};
-		$self->{gamedescr}{Game} =~ m/\G($REanymove)\s*/mgc && do { 
-			push @{$self->{GameMoves}}, $1; 
-			$color = $switchcolor{$color};
-			redo
-		};
-		$self->{gamedescr}{Game} =~ 
-		m/\G($REcomment
-			|$REeolcomment
-			|$RERAV
-			|$RENAG|$REescape)\s*/mgcx 
-		&& do 
-		{
-			if ($save_comments) { 
-				$self->{GameComments}->{$movecount.$color} .= " " . $1;
-				$self->{GameComments}->{$movecount.$color} =~ tr/\r//d;
-				$self->{GameComments}->{$movecount.$color} =~ s/\n/ /g;
-			}
-			redo
-		};
-		$self->{gamedescr}{Game} =~ m/\G(\S+\s*)/mgc && do {
-			if ($log_errors) {
-				$self->{GameErrors}->{$movecount.$color} .= " " . $1;
-				$self->{GameErrors}->{$movecount.$color} =~ tr/\r//d;
-				$self->{GameErrors}->{$movecount.$color} =~ s/\n/ /g;
-			}	
-			redo
-		};
-	}
-	return 1;
+    # ---- start 0.07 changes
+    my $comments_struct = 'string'; 
+    $comments_struct = $params->{comments_struct} 
+        if ($save_comments 
+            and exists $params->{comments_struct}); 
+    $comments_struct = 'string' 
+        unless $comments_struct =~ /^(:?array|hol)$/;
+    my $plycount = 0;
+    my $countless =0;
+    $self->{gamedescr}{Game} =~ s/\s*\Z//;
+    $self->{gamedescr}{Game} =~ s/^\s*//;
+    if ($self->{gamedescr}{Game} !~ /\d\./) {
+        $countless = 1;
+        $movecount = 1;
+    }
+    # ---- end 0.07 changes
+    
+    PARSER:
+    {
+        $self->{gamedescr}{Game} =~ m/\G($REnumber)\s*/mgc && do {
+            my $num=$1;
+            if (( $num =~ tr/\.//d) > 1) {
+                $color = 'w';
+            }
+            if ($movecount == 0) {
+                $movecount = $num;
+                $self->{gamedescr}{FirstMove} = 
+                    $num.$switchcolor{$color} # fixed 0.07
+                        unless $num.$switchcolor{$color} eq '1w';
+            }
+            elsif ($movecount == ($num -1)) {
+                $movecount++;
+            }
+            elsif ($movecount != $num) {
+                $self->{GameErrors}->{$movecount.$color} 
+                    .= " invalid move sequence ($num <=> $movecount)";
+                $movecount++;
+            }
+            redo
+        };
+        $self->{gamedescr}{Game} =~ m/\G($REanymove)\s*/mgc && do { 
+            push @{$self->{GameMoves}}, $1; 
+            $color = $switchcolor{$color};
+            # ---- start 0.07 changes
+            if ($countless) {
+                $plycount++;
+                if ($plycount == 2) {
+                    $plycount =0;
+                    $movecount++;
+                }
+            }
+            # ---- end 0.07 changes
+            redo
+        };
+        $self->{gamedescr}{Game} =~ 
+        m/\G($REcomment
+            |$REeolcomment
+            |$RERAV
+            |$RENAG|$REescape)\s*/mgcx 
+        && do 
+        {
+            if ($save_comments) { 
+                # ---- start 0.07 changes
+                my $tempcomment = $1;
+                $tempcomment =~ tr/\r//d;
+                $tempcomment =~ s/\n/ /g;
+                $tempcomment =~ s/^\s+//;
+                $tempcomment =~ s/\s+$//;
+                if ($comments_struct eq 'string') {
+                    $self->{GameComments}->{$movecount.$color} .= 
+                        " " . $tempcomment;
+                }
+                elsif ($comments_struct eq 'array') {
+                    push @{$self->{GameComments}->{$movecount.$color}},
+                        $tempcomment;
+                }
+                else { # hol
+                    $tempcomment =~ m/^(.)/;
+                    my $comment_type ='unknown';
+                    $comment_type = $comment_types{$1}
+                        if ($1 and exists $comment_types{$1});
+                    push @{$self->{GameComments}->{$movecount.$color}->{$comment_type}} , $tempcomment;
+                }
+                # ---- end 0.07 changes
+            }
+            redo
+        };
+        $self->{gamedescr}{Game} =~ m/\G(\S+\s*)/mgc && do {
+            if ($log_errors) {
+                $self->{GameErrors}->{$movecount.$color} .= " " . $1;
+                $self->{GameErrors}->{$movecount.$color} =~ tr/\r//d;
+                $self->{GameErrors}->{$movecount.$color} =~ s/\n/ /g;
+            }    
+            redo
+        };
+    }
+    return 1;
 }
+} # end closure for parse_game()
 
 =item shrink_epd()
 
@@ -886,7 +1201,7 @@ It can be restored to the original string by expand_epd()
 # E     0000 0000 000
 #                 111
 # rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 (38 bytes)
-# 1011 1101 1100 1010 1001 1100 1101 1011	   4
+# 1011 1101 1100 1010 1001 1100 1101 1011       4
 # 1110 1110 1110 1110 1110 1110 1110 1110      4
 # 11111000                                     1
 # 11111000                                     1
@@ -895,58 +1210,60 @@ It can be restored to the original string by expand_epd()
 # 0110 0110 0110 11110001 0110 0110 0110 0110  4.5
 # 0011 0101 0100 0010 0001 0100 0101 0011      4
 #                                             22
+
+{ #start EPD closure
 my %pieces2bits = (
-	K =>  1,	# 0001
-	k =>  9,	# 1001
-	Q =>  2,	# 0010
-	q => 10,	# 1010
-	R =>  3,	# 0011
-	r => 11,	# 1011
-	B =>  4,	# 0100
-	b => 12,	# 1100
-	N =>  5,	# 0101
-	n => 13,	# 1101
-	P =>  6,	# 0110
-	p => 14,	# 1110
-	1 =>  0,	# 0000
-	2 =>  7,	# 0111
-	3 =>  8,    # 1000
-	4 => 0xF4,  # 1111 0100
-	5 => 0xF5,  # 1111 0101
-	6 => 0xF6,  # 1111 0110
-	7 => 0xF7,  # 1111 0111
-	8 => 0xF8   # 1111 1000
+    K =>  1,    # 0001
+    k =>  9,    # 1001
+    Q =>  2,    # 0010
+    q => 10,    # 1010
+    R =>  3,    # 0011
+    r => 11,    # 1011
+    B =>  4,    # 0100
+    b => 12,    # 1100
+    N =>  5,    # 0101
+    n => 13,    # 1101
+    P =>  6,    # 0110
+    p => 14,    # 1110
+    1 =>  0,    # 0000
+    2 =>  7,    # 0111
+    3 =>  8,    # 1000
+    4 => 0xF4,  # 1111 0100
+    5 => 0xF5,  # 1111 0101
+    6 => 0xF6,  # 1111 0110
+    7 => 0xF7,  # 1111 0111
+    8 => 0xF8   # 1111 1000
 );
 
 my %castling2bits = (
-	'KQkq' => 15, # 1111   F  KQkq
-	'KQk'  => 14, # 1110   E  KQk-
-	'KQq'  => 13, # 1101   D  KQ-q
-	'KQ'   => 12, # 1100   C  KQ--
-	'Kkq'  => 11, # 1011   B  K-kq
-	'Kk'   => 10, # 1010   A  K-k-
-	'Kq'   =>  9, # 1001   9  K--q
-	'K'    =>  8, # 1000   8  K---
-	'Qkq'  =>  7, # 0111   7  -Qkq
-	'Qk'   =>  6, # 0110   6  -Qk-
-	'Qq'   =>  5, # 0101   5  -Q-q
-	'Q'    =>  4, # 0100   4  -Q--
-	'kq'   =>  3, # 0011   3  --kq
-	'k'    =>  2, # 0010   2  --k-
-	'q'    =>  1, # 0001   1  ---q
-	'-'    =>  0  # 0111   0  ----
+    'KQkq' => 15, # 1111   F  KQkq
+    'KQk'  => 14, # 1110   E  KQk-
+    'KQq'  => 13, # 1101   D  KQ-q
+    'KQ'   => 12, # 1100   C  KQ--
+    'Kkq'  => 11, # 1011   B  K-kq
+    'Kk'   => 10, # 1010   A  K-k-
+    'Kq'   =>  9, # 1001   9  K--q
+    'K'    =>  8, # 1000   8  K---
+    'Qkq'  =>  7, # 0111   7  -Qkq
+    'Qk'   =>  6, # 0110   6  -Qk-
+    'Qq'   =>  5, # 0101   5  -Q-q
+    'Q'    =>  4, # 0100   4  -Q--
+    'kq'   =>  3, # 0011   3  --kq
+    'k'    =>  2, # 0010   2  --k-
+    'q'    =>  1, # 0001   1  ---q
+    '-'    =>  0  # 0111   0  ----
 );
 
 my %ep2bits = (
-	'-' => 0,
-	'a' => 1,
-	'b' => 2,
-	'c' => 3,
-	'd' => 4,
-	'e' => 5,
-	'f' => 6,
-	'g' => 7,
-	'h' => 8
+    '-' => 0,
+    'a' => 1,
+    'b' => 2,
+    'c' => 3,
+    'd' => 4,
+    'e' => 5,
+    'f' => 6,
+    'g' => 7,
+    'h' => 8
 );
 my %color2bits = ('w' =>  0, 'b' =>  1 );
 my %bits2color = ( 0  => 'w', 1  => 'b');
@@ -956,26 +1273,26 @@ my %bits2castling = map { $castling2bits{$_}, $_ } keys %castling2bits;
 my %bits2ep       = map { $ep2bits{$_}, $_ } keys %ep2bits;
 
 sub shrink_epd {
-	my $source = shift;
-	my $piece ="";
-	my $vecstring = "";
-	my $offset =0;
-	my ($fen, $color, $castling, $ep) = split / /, $source;
-	while ($fen =~ /(.)/g) {
-		next if $1 eq '/';
-		$piece =  $pieces2bits{$1};
-		if ($piece < 0x0F) {
-			vec($vecstring, $offset++, 4) = $piece;
-		}
-		else {
-			vec($vecstring, $offset++, 4) = 0x0F;
-			vec($vecstring, $offset++, 4) = $1;
-		}
-	}
-	vec($vecstring, $offset++, 4) = $color2bits{$color}; 
-	vec($vecstring, $offset++, 4) = $castling2bits{$castling};
-	vec($vecstring, $offset++, 4) = $ep2bits{substr($ep,0,1)};
-	return $vecstring;
+    my $source = shift;
+    my $piece ="";
+    my $vecstring = "";
+    my $offset =0;
+    my ($fen, $color, $castling, $ep) = split / /, $source;
+    while ($fen =~ /(.)/g) {
+        next if $1 eq '/';
+        $piece =  $pieces2bits{$1};
+        if ($piece < 0x0F) {
+            vec($vecstring, $offset++, 4) = $piece;
+        }
+        else {
+            vec($vecstring, $offset++, 4) = 0x0F;
+            vec($vecstring, $offset++, 4) = $1;
+        }
+    }
+    vec($vecstring, $offset++, 4) = $color2bits{$color}; 
+    vec($vecstring, $offset++, 4) = $castling2bits{$castling};
+    vec($vecstring, $offset++, 4) = $ep2bits{substr($ep,0,1)};
+    return $vecstring;
 }
 
 =item expand_epd()
@@ -985,48 +1302,48 @@ given a EPD bitstring created by shrink_epd(), expand_epd() will restore the ori
 =cut
 
 sub expand_epd {
-	my $vecstring = shift;
-	my $piece = -1;
-	my $asciistr="";
-	my $offset =0;
-	my $rowsum =0;
-	my $overall_sum =0;
-	while ($offset < length($vecstring)*2) {
-		$piece = vec($vecstring, $offset++, 4);
-		if ($piece == 0x0F) {
-			$piece = hex("F" . vec($vecstring,$offset++,4));
-		}
-		$piece = $bits2pieces{$piece};
-		$asciistr .= $piece;
-		if ($piece =~ /[1-8]/) {
-			$rowsum += $piece
-		}
-		else {
-			$rowsum++;
-		}
-		if ($rowsum == 8) {
-			$overall_sum += $rowsum;
-			$rowsum =0;
-			last if ($overall_sum >= 64);
-			$asciistr .='/';
-		}
-	}
-	my $color = $bits2color{vec($vecstring,$offset++,4)};
-	$asciistr .= ' '. $color;
-	$asciistr .= ' '. $bits2castling{vec($vecstring,$offset++,4)};
-	my $ep = $bits2ep{vec($vecstring,$offset++,4)}; 
-	if ($ep ne '-') {
-		$ep .= $color eq 'w' ? '6' : '3';
-	}
-	$asciistr .= ' ' . $ep;
-	return $asciistr;
+    my $vecstring = shift;
+    my $piece = -1;
+    my $asciistr="";
+    my $offset =0;
+    my $rowsum =0;
+    my $overall_sum =0;
+    while ($offset < length($vecstring)*2) {
+        $piece = vec($vecstring, $offset++, 4);
+        if ($piece == 0x0F) {
+            $piece = hex("F" . vec($vecstring,$offset++,4));
+        }
+        $piece = $bits2pieces{$piece};
+        $asciistr .= $piece;
+        if ($piece =~ /[1-8]/) {
+            $rowsum += $piece
+        }
+        else {
+            $rowsum++;
+        }
+        if ($rowsum == 8) {
+            $overall_sum += $rowsum;
+            $rowsum =0;
+            last if ($overall_sum >= 64);
+            $asciistr .='/';
+        }
+    }
+    my $color = $bits2color{vec($vecstring,$offset++,4)};
+    $asciistr .= ' '. $color;
+    $asciistr .= ' '. $bits2castling{vec($vecstring,$offset++,4)};
+    my $ep = $bits2ep{vec($vecstring,$offset++,4)}; 
+    if ($ep ne '-') {
+        $ep .= $color eq 'w' ? '6' : '3';
+    }
+    $asciistr .= ' ' . $ep;
+    return $asciistr;
 }
-
+} # end EPD closure
 =back
 
 =head1 AUTHOR
 
-Giuseppe Maxia, gmax@karma.oltrelinux.com
+Giuseppe Maxia, gmax@cpan.org
 
 =head1 THANKS
 

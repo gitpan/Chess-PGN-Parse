@@ -9,4 +9,5 @@ examples/kk_game4_test.pgn
 examples/test_1_PGN.pl
 examples/test_2_PGN.pl
 examples/test_3_PGN.pl
-examples/test_4_PGN.pl
+examples/test_3_PGN.pl
+examples/test_non_standard.pl
