@@ -11,4 +11,6 @@ examples/test_2_PGN.pl
 examples/test_3_PGN.pl
 examples/test_4_PGN.pl
 examples/test_5_PGN.pl
+examples/test_6_PGN.pl
 examples/test_non_standard.pl
+examples/test_recursion.pl

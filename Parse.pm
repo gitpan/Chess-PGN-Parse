@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.15'; # 09-Jul-2003
+our $VERSION = '0.17'; # 16-Jul-2003
 
 =head1 NAME
 
@@ -246,7 +246,11 @@ sub DESTROY {
     undef $self->{GameErrors};
     undef $self->{gamedescr};
     undef $self->{GameMoves};
-    ${$self->{fh}}->close();
+    eval {
+            #if (defined ${$self->{fh}}) {
+            ${$self->{fh}}->close();
+            #}
+    };
     undef $self->{fh};
 }
 my %SymbolicAnnotationGlyph = (
@@ -345,7 +349,6 @@ returns the EventDate tag
 =item moves()
 
 returns an array reference to the game moves (no numbers)
-
 =cut
 
 =item comments()
@@ -357,6 +360,55 @@ returns a hash reference to the game comments (the key is the move number and th
 =item errors()
 
 returns a hash reference to the game errors (the key is the move number and the value are the errors for such move)
+
+=item set_event()
+
+returns or modifies the Event tag
+
+=item set_site()
+
+returns or modifies the Site tag
+
+=item set_date()
+
+returns or modifies the Date tag
+
+=item set_white()
+
+returns or modifies the White tag
+
+=item set_black()
+
+returns or modifies the Black tag
+
+=item set_result()
+
+returns or modifies the result tag
+
+=item set_round()
+
+returns or modifies the Round tag
+
+=item set_game()
+
+returns or modifies the unparsed game moves
+
+=item set_time()
+
+returns or modifies the Time tag
+
+=item set_eco()
+
+returns or modifies the ECO tag
+
+=item set_eventdate()
+
+returns or modifies the EventDate tag
+
+
+=item set_moves()
+
+returns or modifies an array reference to the game moves (no numbers)
 
 =cut
 
@@ -417,6 +469,79 @@ sub game {
 
 sub moves {
     my $self = shift;
+    return $self->{GameMoves};
+}
+
+
+sub set_event {
+    my $self = shift;
+    $self->{gamedescr}{Event} = $_[0] if @_;
+    return $self->{gamedescr}{Event}
+}
+
+sub set_site {
+    my $self = shift;
+    $self->{gamedescr}{Site} = shift if @_;
+    return $self->{gamedescr}{Site}
+}
+
+sub set_date {
+    my $self = shift;
+    $self->{gamedescr}{Date} = shift if @_;
+    return $self->{gamedescr}{Date}
+}
+
+sub set_white {
+    my $self = shift;
+    $self->{gamedescr}{White} = shift if @_;
+    return $self->{gamedescr}{White}
+}
+
+sub set_black {
+    my $self = shift;
+    $self->{gamedescr}{Black} = shift if @_;
+    return $self->{gamedescr}{Black}
+}
+
+sub set_result {
+    my $self = shift;
+    $self->{gamedescr}{Result} = shift if @_;
+    return $self->{gamedescr}{Result}
+}
+
+sub set_round {
+    my $self = shift;
+     $self->{gamedescr}{Round} = shift if @_;
+    return $self->{gamedescr}{Round}
+}
+
+sub set_time {
+    my $self = shift;
+    $self->{gamedescr}{Time} = shift if @_;
+    return $self->{gamedescr}{Time}
+}
+
+sub set_eventdate {
+    my $self = shift;
+    $self->{gamedescr}{EventDate} = shift if @_;
+    return $self->{gamedescr}{EventDate}
+}
+
+sub set_eco {
+    my $self = shift;
+    $self->{gamedescr}{ECO} = shift if @_;
+    return $self->{gamedescr}{ECO}
+}
+
+sub set_game {
+    my $self = shift;
+    $self->{gamedescr}{Game} = shift if @_;
+    return $self->{gamedescr}{Game}
+}
+
+sub set_moves {
+    my $self = shift;
+    $self->{GameMoves} = shift if (@_ && (ref $_[0] eq 'ARRAY')) ;
     return $self->{GameMoves};
 }
 
@@ -647,11 +772,14 @@ sub read_game {
                 $memory{tag} .= "\n";
             }
         }
-        elsif (/^\[/) {
+        elsif (/^\[/ && (! $memory{game})) {
             my $left = tr/\[//;
             my $right = tr/\]//;
             if ($left == $right) {
                 $memory{tag} = $_;
+            }
+            elsif ($right > $left) {
+                warn "Parsing error at line $.\n";
             }
             else {
                 $memory{utag} = 1;
