@@ -29,7 +29,7 @@ while ($pgn->read_game()) {
             for (keys %{$pgn->{GameComments}}) {
                 next unless exists $pgn->{GameComments}{$_}->{RAV};
                 for my $variation (@{$pgn->{GameComments}{$_}->{RAV}}) {
-                    my $move = $_;
+                    my $move = $_ || "";
                     $variation =~ s/^\(//;
                     $variation =~ s/\)$//;
                     $variation = 

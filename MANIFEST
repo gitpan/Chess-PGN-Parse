@@ -14,3 +14,4 @@ examples/test_5_PGN.pl
 examples/test_6_PGN.pl
 examples/test_non_standard.pl
 examples/test_recursion.pl
+META.yml                                 Module meta-data (added by MakeMaker)

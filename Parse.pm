@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.17'; # 16-Jul-2003
+our $VERSION = '0.18'; # 25-May-2004
 
 =head1 NAME
 
@@ -1113,13 +1113,15 @@ Parameters  (passed as a hash reference): check_moves = 'yes'|'no'. Default : no
 # and inserted here for efficiency reasons.
 # ==============================================
 
-our $RE_parens = qr/
+our $RE_parens;
+$RE_parens = qr/
     (?:(?:(?:[(](?:(?>[^)(]+)
     |(??{$RE_parens}))*[)]))
     |(?:(?!)))
     /x;
 
-our $RE_brace = qr/
+our $RE_brace;
+$RE_brace = qr/
     (?:(?:(?:[{](?:(?>[^}{]+)
     |(??{$RE_brace}))*[}]))
     |(?:(?!)))

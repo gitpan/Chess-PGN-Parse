@@ -1,5 +1,12 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.18 25-May-2004
+    - Broken compatibility release. 
+      Perl 5.8.4 won't compile a recursive regex without
+      some minor modifications. Fixed.
+      If you are still using a previous version of Perl, there
+      is no need to switch.
+
 0.17 15-Jul-2003
     - Added some more control to parse irregularly formatted tags
     - Added set_{tag} methods, to set game, moves, white, black,

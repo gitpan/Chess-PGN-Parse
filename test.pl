@@ -30,7 +30,7 @@ print "ok 5 (read and parse -- complete)\n";
 END {
 	print "not ok 1\n" unless $loaded;
 	print "not ok 2\n" unless $created1;
-	print "not ok 3\n" unless $parsed1;
-	print "not ok 4\n" unless $created2;
-	print "not ok 5\n" unless $parsed2;
+    print "not ok 3\n" unless $parsed1;
+    print "not ok 4\n" unless $created2;
+    print "not ok 5\n" unless $parsed2;
 }
