@@ -1213,7 +1213,7 @@ sub parse_game {
     return 1;
 }
 
-=item add_comment()
+=item add_comments()
 
 Allows inserting comments for an already parsed game;
 it accepts comments passed as an anonymous hash.

@@ -1,5 +1,7 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.16 09-Jul-2003
+    - Fixed yet another minor POD formatting problem
 0.15 09-Jul-2003
     - Fixed minor POD formatting problem
 0.14 08-Jul-2003
