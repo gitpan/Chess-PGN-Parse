@@ -1,11 +1,15 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.10 23-Dec-2002
+    - Changed behavior in parse_game. Now the array in moves() is 
+    always initialized and the method returns a valid array also when
+    no moves are found (although it coud empty).
 0.09 22-Dec-2002
     - Changed parse engine, to make it 5% faster. Thanks to [Tye]
 0.08 22-Dec-2002
     - Fixed a Regex mistake, which didn't have effect on accuracy, 
       but was affecting performamce negatively. Thanks to
-      Nathan Jeff for the tip.
+      Nathan Neff for the tip.
 0.07 28-Mar-2002
 	- a new read_game() method to support irregular input 
       1. no blank line between tags and moves;

@@ -36,7 +36,7 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(shrink_epd expand_epd STR NAG);
 our @EXPORT_OK = qw();
 
-our $VERSION = '0.09'; # 22-Dec-2002
+our $VERSION = '0.10'; # 23-Dec-2002
 
 =head1 NAME
 
@@ -1085,7 +1085,6 @@ sub parse_game {
     $self->{gamedescr}{Game} =~ s/0\-0/O-O/g;
     $self->{gamedescr}{Game} =~ s/$REresult\s*\Z//o;
 
-    # ---- start 0.07 changes
     my $comments_struct = 'string'; 
     $comments_struct = $params->{comments_struct} 
         if ($save_comments 
@@ -1100,11 +1099,11 @@ sub parse_game {
         $countless = 1;
         $movecount = 1;
     }
-    # ---- end 0.07 changes
+    
+    $self->{GameMoves} = [];
     
     for ($self->{gamedescr}{Game}) {
         while (! /\G \s* \z/xgc ) {
-        
             if ( m/\G($REnumber)\s*/mgc) {
                 my $num=$1;
                 if (( $num =~ tr/\.//d) > 1) {
@@ -1128,7 +1127,6 @@ sub parse_game {
             elsif ( m/\G($REanymove)\s*/mgc ) { 
                 push @{$self->{GameMoves}}, $1; 
                 $color = $switchcolor{$color};
-                # ---- start 0.07 changes
                 if ($countless) {
                     $plycount++;
                     if ($plycount == 2) {
@@ -1136,7 +1134,6 @@ sub parse_game {
                         $movecount++;
                     }
                 }
-                # ---- end 0.07 changes
             }
             elsif ( 
                 m/\G($REcomment
@@ -1146,7 +1143,6 @@ sub parse_game {
                 ) 
             {
                 if ($save_comments) { 
-                    # ---- start 0.07 changes
                     my $tempcomment = $1;
                     $tempcomment =~ tr/\r//d;
                     $tempcomment =~ s/\n/ /g;
@@ -1165,9 +1161,9 @@ sub parse_game {
                         my $comment_type ='unknown';
                         $comment_type = $comment_types{$1}
                         if ($1 and exists $comment_types{$1});
-                            push @{$self->{GameComments}->{$movecount.$color}->{$comment_type}} , $tempcomment;
+                            push @{$self->{GameComments}->{$movecount.$color}->{$comment_type}} , 
+                                $tempcomment;
                         }
-                    # ---- end 0.07 changes
                 }
             }
             elsif ( m/\G(\S+\s*)/mgc ) {
@@ -1349,7 +1345,7 @@ Thanks to
 - Hugh S. Myers for advice, support, testing and brainstorming;
 - Damian Conway for the recursive Regular Expressions used to parse comments;
 - all people at PerlMonks (www.perlmonks.org) for advice and good developing environment.
-- Nathan Jeff for pointing out an insidious, hard-to-spot bug in my RegExes.
+- Nathan Neff for pointing out an insidious, hard-to-spot bug in my RegExes.
 
 =head1 COPYRIGHT
 
