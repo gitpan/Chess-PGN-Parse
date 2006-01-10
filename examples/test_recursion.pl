@@ -29,11 +29,11 @@ while ($pgn->read_game()) {
             for (keys %{$pgn->{GameComments}}) {
                 next unless exists $pgn->{GameComments}{$_}->{RAV};
                 for my $variation (@{$pgn->{GameComments}{$_}->{RAV}}) {
-                    my $move = $_ || "";
+                    my $move = $_ || q{};
                     $variation =~ s/^\(//;
                     $variation =~ s/\)$//;
                     $variation = 
-                    "[variation \"$move\"]\n[Result \"\*\"]\n" 
+                    qq([Variation "$move"]\n[Result "*"]\n) 
                         . $variation; 
                     my $newpgn = new Chess::PGN::Parse( undef, 
                         $variation) or die "can't $_\n";
@@ -67,7 +67,7 @@ __DATA__
 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 $1 {first comment} 4. Ba4 Nf6 5. O-O 
 Nxe4 {second comment} 6. d4 ; comment starting with ";" up to EOL 
 b5 7. Bb3 d5 8. dxe5 Be6 9. Be3 {third comment} 9... Bc5 10. Qd3 O-O 
-11. Nc3 Nb4 (11... Be3 12 Qe3 Nc3) (11... Bxe3 12. Qxe3 Nxc3 13. 
+11. Nc3 Nb4 (11... Be3 12. Qe3 Nc3) (11... Bxe3 12. Qxe3 Nxc3 13. 
 Qxc3 Qd7 14. Rad1 Nd8 $1 15. Nd4 c6 $14 (15... Nb7 16. Qc6 $1 $16)) 
 12. Qe2 Nxc3 13. bxc3 Bxe3 
 % escaped line - it will be discarded up to the EOL

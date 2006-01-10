@@ -1,5 +1,15 @@
 Revision history for Perl extension Chess::PGN::Parse.
 
+0.19 10-Jan-2006
+    - fixed bug in recursive comment printout.
+      Thanks to Dadi Jonsson for reporting it;
+    - Added support for comments with newlines in between. 
+      Thanks to Marcin Kasperski for the test case. 
+    - Added support for promotions without the equal sign
+      (e.g.: e8Q instead of e8=Q)
+      Thanks to Andrew Nikitin for reporting it.
+    - Tidied the code a bit.
+
 0.18 25-May-2004
     - Broken compatibility release. 
       Perl 5.8.4 won't compile a recursive regex without
